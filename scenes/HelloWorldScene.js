@@ -15,32 +15,71 @@ export default class HelloWorldScene extends Phaser.Scene {
   }
 
   preload() {
-    // load assets
-    this.load.image("sky", "./assets/space3.png");
-    this.load.image("logo", "./assets/phaser3-logo.png");
-    this.load.image("red", "./assets/particles/red.png");
-  }
+    //assets
+    this.load.image("cielo", "./public/assets/cielo.webp");
+    this.load.image("fondomenu", "./public/assets/phaser3-logo.png");
+    this.load.image("plataform", "./public/assets/platform.png");
+    this.load.image("ninja","./public/assets/Ninja.png")
+    }
 
   create() {
-    // create game objects
-    this.add.image(400, 300, "sky");
+    // objetos del juego
+    this.add.image(400, 300, "cielo").setScale(2);
+    this.ninja = this.physics.add.sprite(400, 530, "ninja").setScale(0.125);
+    //this.ninja.body.setGravityY(500);
 
-    const logo = this.physics.add.image(400, 100, "logo");
-    logo.setVelocity(100, 200);
-    logo.setBounce(1, 1);
-    logo.setCollideWorldBounds(true);
+    // platform
+    this.platform = this.physics.add.staticGroup(); 
+    this.platform.create(400, 585, "plataform").setScale(2, 1.6).refreshBody();
+    this.platform.create(700, 350, "plataform").setScale(0.5, 1.2).refreshBody();
+    
+    // colisiones
+    this.physics.add.collider(this.ninja, this.platform);
 
-    // emmit particles from logo
-    const emitter = this.add.particles(0, 0, "red", {
-      speed: 100,
-      scale: { start: 1, end: 0 },
-      blendMode: "ADD",
+    // tecclas de movimiento
+    this.cursors = this.input.keyboard.addKeys({
+      up: Phaser.Input.Keyboard.KeyCodes.W,
+      down: Phaser.Input.Keyboard.KeyCodes.S,
+      left: Phaser.Input.Keyboard.KeyCodes.A,
+      right: Phaser.Input.Keyboard.KeyCodes.D
     });
-
-    emitter.startFollow(logo);
+    this.inAir = true
   }
 
   update() {
-    // update game objects
+    const speed = 200;
+
+    //no movimiento
+    
+    //movimiento horizontal
+    if (this.cursors.left.isDown) {
+      this.ninja.setVelocityX(-speed);
+    } 
+    if (this.cursors.right.isDown) {
+      this.ninja.setVelocityX(speed);
+    }
+    //no movimiento
+    if (this.cursors.left.isDown && this.cursors.right.isDown) {
+      this.ninja.setVelocityX(0);
+      //this.ninja.angle = 0;
+    } else if (this.cursors.left.isUp && this.cursors.right.isUp) {
+      this.ninja.setVelocityX(0);
+    }
+
+    // movimiento vertical
+    if (this.cursors.up.isDown && this.ninja.body.touching.down) {
+      this.ninja.setVelocityY(-350);
+    } 
+    if (this.cursors.down.isDown && this.inAir && !this.ninja.body.touching.down) {
+      this.ninja.setVelocityY(300);
+      this.inAir = false;
+    }
+    if (this.ninja.body.touching.down) {
+      this.inAir = true;
+    }
+    // restringir movimiento horizontal
+    if (this.ninja.x < 0 || this.ninja.x > 800) {
+      this.ninja.setPosition(400, 500);
+    }
   }
 }
