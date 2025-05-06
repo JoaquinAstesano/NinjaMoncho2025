@@ -58,6 +58,11 @@ export default class HelloWorldScene extends Phaser.Scene {
 
         // Add collision with the platform
         this.physics.add.collider(fallingObject, this.platform);
+
+        // Add collision with the ninja and destroy the object on collision
+        this.physics.add.collider(fallingObject, this.ninja, () => {
+          fallingObject.destroy();
+        });
       
       },
       loop: true
