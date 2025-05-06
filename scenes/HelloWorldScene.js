@@ -17,9 +17,12 @@ export default class HelloWorldScene extends Phaser.Scene {
   preload() {
     //assets
     this.load.image("cielo", "./public/assets/cielo.webp");
-    this.load.image("fondomenu", "./public/assets/phaser3-logo.png");
+    this.load.image("fondomenu", "./public/assets/FondoMenu.jpg");
     this.load.image("plataform", "./public/assets/platform.png");
     this.load.image("ninja","./public/assets/Ninja.png")
+    this.load.image("diamond", "./public/assets/diamond.png");
+    this.load.image("square", "./public/assets/square.png");
+    this.load.image("triangle", "./public/assets/triangle.png");
     }
 
   create() {
@@ -44,12 +47,26 @@ export default class HelloWorldScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D
     });
     this.inAir = true
+
+    this.time.addEvent({
+      delay: 1000, // 1 second
+      callback: () => {
+        const x = Phaser.Math.Between(50, 750); // Random x position
+       const tipo = Phaser.Utils.Array.GetRandom(["triangle", "square", "diamond"]);
+        const fallingObject = this.physics.add.sprite(x, 50, tipo).setScale(0.5);
+        
+
+        // Add collision with the platform
+        this.physics.add.collider(fallingObject, this.platform);
+      
+      },
+      loop: true
+    });
   }
 
   update() {
     const speed = 200;
 
-    //no movimiento
     
     //movimiento horizontal
     if (this.cursors.left.isDown) {
