@@ -23,6 +23,7 @@ export default class HelloWorldScene extends Phaser.Scene {
     this.load.image("diamond", "./public/assets/diamond.png");
     this.load.image("square", "./public/assets/square.png");
     this.load.image("triangle", "./public/assets/triangle.png");
+    this.load.image("bomb", "./public/assets/bomb.png"); 
     }
 
   create() {
@@ -47,25 +48,107 @@ export default class HelloWorldScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D
     });
     this.inAir = true
+    
+    // Contador de tiempo
+    this.timeLeft = 60; // 60 segundos
+    this.timerText = this.add.text(16, 16, `Tiempo: ${this.timeLeft}`, { fontSize: '32px', fill: '#FFF' });
 
     this.time.addEvent({
-      delay: 1000, // 1 second
+      delay: 1000, // 1 segundo
       callback: () => {
-        const x = Phaser.Math.Between(50, 750); // Random x position
-       const tipo = Phaser.Utils.Array.GetRandom(["triangle", "square", "diamond"]);
-        const fallingObject = this.physics.add.sprite(x, 50, tipo).setScale(0.5);
-        
-
-        // Add collision with the platform
-        this.physics.add.collider(fallingObject, this.platform);
-
-        // Add collision with the ninja and destroy the object on collision
-        this.physics.add.collider(fallingObject, this.ninja, () => {
-          fallingObject.destroy();
-        });
-      
+        this.timeLeft--; // Reducir el tiempo restante
+        this.timerText.setText(`Tiempo: ${this.timeLeft}`); // Actualizar el texto del temporizador
+        if (this.timeLeft <= 0) {
+          this.gameOver(); // Llamar a la función de Game Over
+        }
       },
-      loop: true
+      loop: true,
+    });
+
+    // Crear un suelo invisible para detectar colisiones con los objetos que caen
+    this.ground = this.physics.add.staticGroup();
+    this.ground.create(400, 600, "plataform").setScale(2, 0.1).refreshBody(); // Suelo invisible fuera de la pantalla
+
+    // Puntuación inicial
+    this.score = 0;
+    this.scoreText = this.add.text(16, 50, `Puntos: ${this.score}`, { fontSize: '32px', fill: '#FFF' });
+
+    // Función para manejar colisiones con la plataforma y el suelo
+    const handleCollision = (object) => {
+      if (object.valor > 0) {
+        object.valor -= 5; // Reducir el valor en 5
+        if (object.valor <= 0) {
+          object.destroy(); // Destruir el objeto si el valor llega a 0
+        }
+      } else if (object.rebotes !== undefined) {
+        object.rebotes++; // Incrementar contador de rebotes para bombas
+        if (object.rebotes >= 2) {
+          object.destroy(); // Destruir la bomba después de 2 rebotes
+        }
+      }
+    };
+
+    // Evento para generar bombas cada 3 segundos
+    this.time.addEvent({
+      delay: 3000, // 3 segundos
+      callback: () => {
+        const x = Phaser.Math.Between(50, 750); // Posición aleatoria en x
+        const fallingBomb = this.physics.add.sprite(x, 50, "bomb").setScale(0.5); // Crear bomba
+
+        fallingBomb.valor = -10; // La bomba descuenta 10 puntos
+        fallingBomb.rebotes = 0; // Contador de rebotes para las bombas
+
+        // Configurar rebote
+        fallingBomb.setBounce(0.8); // Rebote ajustado para las bombas
+        fallingBomb.setCollideWorldBounds(true); // Evitar que salga del mundo
+
+        // Colisión con la plataforma y el suelo
+        this.physics.add.collider(fallingBomb, this.platform, () => handleCollision(fallingBomb));
+        this.physics.add.collider(fallingBomb, this.ground, () => handleCollision(fallingBomb));
+
+        // Detectar superposición con el ninja y destruir la bomba
+        this.physics.add.overlap(fallingBomb, this.ninja, () => {
+          this.score += fallingBomb.valor; // Restar puntos
+          this.scoreText.setText(`Puntos: ${this.score}`); // Actualizar texto de puntuación
+          if (this.score >= 100) { // Condición de victoria al llegar a 100 puntos
+            this.victory(); // Llamar a la función de victoria
+          }
+          fallingBomb.destroy(); // Destruir la bomba
+        });
+      },
+      loop: true,
+    });
+
+    // Evento para generar otros objetos cada 1 segundo
+    this.time.addEvent({
+      delay: 1000, // 1 segundo
+      callback: () => {
+        const x = Phaser.Math.Between(50, 750); // Posición aleatoria en x
+        const tipo = Phaser.Utils.Array.GetRandom(["triangle", "square", "diamond"]);
+        const fallingObject = this.physics.add.sprite(x, 50, tipo).setScale(0.5); // Crear objeto
+
+        // Asignar valor al objeto
+        fallingObject.valor = tipo === "square" ? 5 : tipo === "triangle" ? 10 : 15;
+
+        // Configurar rebote
+        fallingObject.setBounce(0.8); // Rebote ajustado para todas las figuras
+        fallingObject.setCollideWorldBounds(true); // Evitar que salga del mundo
+
+        // Colisión con la plataforma y el suelo
+        this.physics.add.collider(fallingObject, this.platform, () => handleCollision(fallingObject));
+        this.physics.add.collider(fallingObject, this.ground, () => handleCollision(fallingObject));
+
+        // Detectar superposición con el ninja y destruir el objeto
+        this.physics.add.overlap(fallingObject, this.ninja, () => {
+          this.score += fallingObject.valor; // Sumar puntos
+          this.scoreText.setText(`Puntos: ${this.score}`); // Actualizar texto de puntuación
+          if (this.score >= 100) { // Condición de victoria al llegar a 100 puntos
+            this.victory(); // Llamar a la función de victoria
+          }
+          fallingObject.destroy(); // Destruir el objeto
+        });
+      },
+      loop: true,
     });
   }
 
@@ -104,4 +187,14 @@ export default class HelloWorldScene extends Phaser.Scene {
       this.ninja.setPosition(400, 500);
     }
   }
+  gameOver() {
+    // Cambiar a la escena de fin con el mensaje de derrota
+    this.scene.start("end-scene", { message: "¡Perdiste!" });
+  }
+
+  victory() {
+    // Cambiar a la escena de fin con el mensaje de victoria
+    this.scene.start("end-scene", { message: "¡Ganaste!" });
+  }
 }
+
