@@ -173,8 +173,6 @@ export default class HelloWorldScene extends Phaser.Scene {
   }
 
   victory() {
-    // Detener todos los eventos de tiempo para evitar que sigan generando objetos
-    this.time.events && this.time.events.removeAll && this.time.events.removeAll();
     this.scene.start("end-scene", { message: "¡Ganaste!", score: this.score });
   }
 }
